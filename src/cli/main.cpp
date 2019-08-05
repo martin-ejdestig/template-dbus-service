@@ -27,7 +27,7 @@ namespace
     using Proxy = com::luxoft::TemplateProxy;
 }
 
-int main(int /*argc*/, char * /*argv*/ [])
+int main(int /*argc*/, char * /*argv*/[])
 {
     std::setlocale(LC_ALL, "");
 
