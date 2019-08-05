@@ -1,0 +1,87 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2019 Martin Ejdestig <marejde@gmail.com>
+# Copyright (C) 2019 Luxoft Sweden AB
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+#
+# SPDX-License-Identifier: MPL-2.0
+
+# pylint: disable=missing-docstring
+
+# Long term the clang-format and clang-tidy checks should be replaced by Meson
+# targets. There already is a clang-format target but it modifies code, want a
+# target that only checks. See https://github.com/mesonbuild/meson/issues/2383
+# for status of clang-tidy target.
+
+import glob
+import json
+import os
+import sys
+
+from concurrent.futures import ThreadPoolExecutor
+from itertools import chain
+from subprocess import run
+
+
+_PUBLIC_INCLUDE_DIR = 'include'
+_SRC_DIRS = ['src', _PUBLIC_INCLUDE_DIR]
+
+
+def _clang_format(executor, paths):
+    def run_clang_format(path):
+        args = ['clang-format', '"' + path + '"', '|', 'diff', '-up', '"' + path + '"', '-']
+        print('clang-format ' + path)
+        return run(' '.join(args), shell=True).returncode == 0
+
+    return all(list(executor.map(run_clang_format, paths)))
+
+
+def _clang_tidy(executor, build_dir, paths):
+    try:
+        with open(os.path.join(build_dir, 'compile_commands.json')) as json_file:
+            buildable_paths = {
+                os.path.relpath(os.path.normpath(os.path.join(entry['directory'], entry['file'])))
+                for entry in json.load(json_file)
+            }
+    except (OSError, json.JSONDecodeError, KeyError) as error:
+        print(error)
+        return False
+
+    header_filter = '|'.join('^../' + d + '/' for d in _SRC_DIRS)
+
+    def run_clang_tidy(path):
+        args = ['clang-tidy', '-warnings-as-errors=*', '-extra-arg=-Wno-unknown-warning-option']
+        args += ['-quiet', '-header-filter=' + header_filter, '-p', build_dir, path]
+        print('clang-tidy ' + path)
+        return run(args).returncode == 0
+
+    return all(list(executor.map(run_clang_tidy, [p for p in paths if p in buildable_paths])))
+
+
+def _find_source_files():
+    return sorted(chain.from_iterable(glob.iglob(src_dir + '/**/*.[ch]*', recursive=True)
+                                      for src_dir in _SRC_DIRS))
+
+
+def main():
+    root_dir = sys.argv[1]
+    build_dir = sys.argv[2]
+
+    os.chdir(root_dir)
+    paths = _find_source_files()
+
+    with ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
+        results = [
+            _clang_format(executor, paths),
+            _clang_tidy(executor, build_dir, paths)
+        ]
+
+    if not all(results):
+        sys.exit(1)
+
+
+if __name__ == '__main__':
+    main()
