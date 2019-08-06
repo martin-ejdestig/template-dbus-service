@@ -23,16 +23,16 @@ node("Component") {
     }
 
     image.inside {
-        stage("Build") {
+        stage("Build for Host") {
             sh 'meson -Dwerror=true build'
             sh 'ninja -C build'
         }
 
-        stage("Tests") {
+        stage("Tests on Host") {
             sh 'meson test -C build --print-errorlogs'
         }
 
-        stage("Check") {
+        stage("Check Source") {
             sh 'tools/check . build'
         }
 
