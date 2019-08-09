@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/bin/sh
 #
 # Copyright (C) 2019 Martin Ejdestig <marejde@gmail.com>
 # Copyright (C) 2019 Luxoft Sweden AB
@@ -9,79 +9,35 @@
 #
 # SPDX-License-Identifier: MPL-2.0
 
-# pylint: disable=missing-docstring
-
 # Long term the clang-format and clang-tidy checks should be replaced by Meson
 # targets. There already is a clang-format target but it modifies code, want a
 # target that only checks. See https://github.com/mesonbuild/meson/issues/2383
 # for status of clang-tidy target.
 
-import glob
-import json
-import os
-import sys
+if [ $# -ne 2 ]; then
+    echo "Usage: $0 <root_dir> <build_dir_in_root_dir>"
+    exit 1
+fi
 
-from concurrent.futures import ThreadPoolExecutor
-from itertools import chain
-from subprocess import run
+root_dir=$1
+build_dir=$2
 
+set -e
+cd $root_dir
 
-_PUBLIC_INCLUDE_DIR = 'include'
-_SRC_DIRS = ['src', _PUBLIC_INCLUDE_DIR]
+# clang-format
+find $(ls -d include src 2>/dev/null) -name "*.[ch]*" | while read f; do
+    echo "clang-format $f"
+    clang-format "$f" | diff -up "$f" -
+done
 
+# clang-tidy
+ct_tmp_file=$(mktemp)
+run-clang-tidy -p "$build_dir" -header-filter='^../include/|^../src/' -extra-arg=-Wno-unknown-warning-option -- "$(pwd)/src/" | tee $ct_tmp_file
+ct_warning_error_count=$(grep --count -i "warning: \|error: " $ct_tmp_file || true)
+rm $ct_tmp_file
 
-def _clang_format(executor, paths):
-    def run_clang_format(path):
-        args = ['clang-format', '"' + path + '"', '|', 'diff', '-up', '"' + path + '"', '-']
-        print('clang-format ' + path)
-        return run(' '.join(args), shell=True).returncode == 0
-
-    return all(list(executor.map(run_clang_format, paths)))
-
-
-def _clang_tidy(executor, build_dir, paths):
-    try:
-        with open(os.path.join(build_dir, 'compile_commands.json')) as json_file:
-            buildable_paths = {
-                os.path.relpath(os.path.normpath(os.path.join(entry['directory'], entry['file'])))
-                for entry in json.load(json_file)
-            }
-    except (OSError, json.JSONDecodeError, KeyError) as error:
-        print(error)
-        return False
-
-    header_filter = '|'.join('^../' + d + '/' for d in _SRC_DIRS)
-
-    def run_clang_tidy(path):
-        args = ['clang-tidy', '-warnings-as-errors=*', '-extra-arg=-Wno-unknown-warning-option']
-        args += ['-quiet', '-header-filter=' + header_filter, '-p', build_dir, path]
-        print('clang-tidy ' + path)
-        return run(args).returncode == 0
-
-    return all(list(executor.map(run_clang_tidy, [p for p in paths if p in buildable_paths])))
-
-
-def _find_source_files():
-    return sorted(chain.from_iterable(glob.iglob(src_dir + '/**/*.[ch]*', recursive=True)
-                                      for src_dir in _SRC_DIRS))
-
-
-def main():
-    root_dir = sys.argv[1]
-    build_dir = sys.argv[2]
-
-    os.chdir(root_dir)
-    paths = _find_source_files()
-
-    with ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
-        results = [
-            _clang_format(executor, paths),
-            _clang_tidy(executor, build_dir, paths)
-        ]
-
-    if not all(results):
-        sys.exit(1)
-
-
-if __name__ == '__main__':
-    main()
+if [[ -z $ct_warning_error_count || $ct_warning_error_count -gt 0 ]]; then
+    echo "clang-tidy failed, $ct_warning_error_count warnings/errors in non-system code."
+    exit 1
+fi

@@ -26,7 +26,8 @@ RUN apt-get update && \
 RUN rm -rf /var/lib/apt/lists/*
 
 RUN update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/clang-format-8 1000 && \
-    update-alternatives --install /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-8 1000
+    update-alternatives --install /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-8 1000 && \
+    update-alternatives --install /usr/bin/run-clang-tidy run-clang-tidy /usr/bin/run-clang-tidy-8 1000
 
 # Install googletest package with apt-get above instead when upgrading to Ubuntu >= 19.04.
 RUN tag=release-1.8.1 dir=googletest-$tag && \
