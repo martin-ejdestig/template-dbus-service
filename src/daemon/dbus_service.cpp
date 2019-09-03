@@ -26,8 +26,9 @@ namespace TemplateDBusService::Daemon
 
     void DBusService::own_name()
     {
-        if (connection_id_ != 0)
+        if (connection_id_ != 0) {
             return;
+        }
 
         connection_id_ = Gio::DBus::own_name(Gio::DBus::BUS_TYPE_SYSTEM,
                                              Common::DBus::TEMPLATE_SERVICE_NAME,
@@ -38,8 +39,9 @@ namespace TemplateDBusService::Daemon
 
     void DBusService::unown_name()
     {
-        if (connection_id_ == 0)
+        if (connection_id_ == 0) {
             return;
+        }
 
         Gio::DBus::unown_name(connection_id_);
         connection_id_ = 0;
@@ -48,8 +50,9 @@ namespace TemplateDBusService::Daemon
     void DBusService::bus_acquired(const Glib::RefPtr<Gio::DBus::Connection> &connection,
                                    const Glib::ustring & /*name*/)
     {
-        if (template_.register_object(connection, Common::DBus::TEMPLATE_OBJECT_PATH) == 0)
+        if (template_.register_object(connection, Common::DBus::TEMPLATE_OBJECT_PATH) == 0) {
             main_loop_->quit();
+        }
     }
 
     void DBusService::name_acquired(const Glib::RefPtr<Gio::DBus::Connection> & /*connection*/,

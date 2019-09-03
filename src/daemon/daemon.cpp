@@ -40,8 +40,9 @@ namespace TemplateDBusService::Daemon
 
     int Daemon::run()
     {
-        if (!register_signal_handlers())
+        if (!register_signal_handlers()) {
             return EXIT_FAILURE;
+        }
 
         dbus_service_.own_name();
 
@@ -72,8 +73,9 @@ namespace TemplateDBusService::Daemon
 
         bool success = sigint_source_id_ != 0 && sigterm_source_id_ != 0 && sighup_source_id_ != 0;
 
-        if (!success)
+        if (!success) {
             unregister_signal_handlers();
+        }
 
         return success;
     }
