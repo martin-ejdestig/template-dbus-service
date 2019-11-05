@@ -35,7 +35,7 @@ namespace TemplateDBusService::Daemon
         void reload_config() const;
 
     private:
-        bool register_signal_handlers();
+        void register_signal_handlers();
         void unregister_signal_handlers();
 
         Glib::RefPtr<Glib::MainLoop> main_loop_ = Glib::MainLoop::create();

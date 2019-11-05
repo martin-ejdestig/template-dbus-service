@@ -12,7 +12,6 @@
 #include <glib.h>
 #include <glibmm.h>
 
-#include <cassert>
 #include <csignal>
 #include <cstddef>
 
@@ -40,15 +39,13 @@ namespace TemplateDBusService::Daemon
 
     int Daemon::run()
     {
-        if (!register_signal_handlers()) {
-            return EXIT_FAILURE;
-        }
-
+        register_signal_handlers();
         dbus_service_.own_name();
 
         main_loop_->run();
 
         dbus_service_.unown_name();
+        unregister_signal_handlers();
 
         return EXIT_SUCCESS;
     }
@@ -62,22 +59,19 @@ namespace TemplateDBusService::Daemon
     {
     }
 
-    bool Daemon::register_signal_handlers()
+    void Daemon::register_signal_handlers()
     {
-        assert(sigint_source_id_ == 0 && sigterm_source_id_ == 0 && sighup_source_id_ == 0);
-
-        // g_unix_signal_add() is not wrapped in glibmm, use id:s even if it is a bit error prone.
-        sigint_source_id_ = g_unix_signal_add(SIGINT, sigint_and_sigterm_callback, this);
-        sigterm_source_id_ = g_unix_signal_add(SIGTERM, sigint_and_sigterm_callback, this);
-        sighup_source_id_ = g_unix_signal_add(SIGHUP, sighup_callback, this);
-
-        bool success = sigint_source_id_ != 0 && sigterm_source_id_ != 0 && sighup_source_id_ != 0;
-
-        if (!success) {
-            unregister_signal_handlers();
+        if (sigint_source_id_ == 0) {
+            sigint_source_id_ = g_unix_signal_add(SIGINT, sigint_and_sigterm_callback, this);
         }
 
-        return success;
+        if (sigterm_source_id_ == 0) {
+            sigterm_source_id_ = g_unix_signal_add(SIGTERM, sigint_and_sigterm_callback, this);
+        }
+
+        if (sighup_source_id_ == 0) {
+            sighup_source_id_ = g_unix_signal_add(SIGHUP, sighup_callback, this);
+        }
     }
 
     void Daemon::unregister_signal_handlers()
