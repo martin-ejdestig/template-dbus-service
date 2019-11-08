@@ -13,6 +13,8 @@
 #include <cstdlib>
 #include <iostream>
 
+#include "cli/arguments.h"
+#include "cli/run.h"
 #include "common/dbus.h"
 #include "common/version.h"
 #include "generated/dbus/template_proxy.h"
@@ -23,39 +25,37 @@
 
 namespace
 {
-    // using Arguments = TemplateDBusService::Cli::Arguments;
-    using Proxy = com::luxoft::TemplateProxy;
+    using Arguments = TemplateDBusService::Cli::Arguments;
+    using TemplateProxy = com::luxoft::TemplateProxy;
 }
 
-int main(int /*argc*/, char * /*argv*/[])
+int main(int argc, char *argv[])
 {
     std::setlocale(LC_ALL, "");
 
     Glib::init();
     Gio::init();
 
-    // Do some argument parsing here. E.g. nice to have a --version for both service and client.
-    // std::optional<Arguments> arguments = Arguments::parse(argc, argv);
-    // if (!arguments)
-    //     return EXIT_FAILURE;
-    //
-    // if (arguments->print_version_and_exit) {
-    //     std::cout << Glib::get_prgname() << " " << TemplateDBusService::Common::VERSION << '\n';
-    //     return EXIT_SUCCESS;
-    // }
+    std::optional<Arguments> arguments = Arguments::parse(argc, argv, std::cout);
+    if (!arguments) {
+        return EXIT_FAILURE;
+    }
 
-    Glib::RefPtr<Proxy> proxy =
-        Proxy::createForBus_sync(Gio::DBus::BUS_TYPE_SYSTEM,
-                                 Gio::DBus::PROXY_FLAGS_NONE,
-                                 TemplateDBusService::Common::DBus::TEMPLATE_SERVICE_NAME,
-                                 TemplateDBusService::Common::DBus::TEMPLATE_OBJECT_PATH);
+    if (arguments->print_version_and_exit) {
+        std::cout << Glib::get_prgname() << " " << TemplateDBusService::Common::VERSION << '\n';
+        return EXIT_SUCCESS;
+    }
 
-    if (proxy->dbusProxy()->get_name_owner().empty()) {
+    Glib::RefPtr<TemplateProxy> template_proxy =
+        TemplateProxy::createForBus_sync(Gio::DBus::BUS_TYPE_SYSTEM,
+                                         Gio::DBus::PROXY_FLAGS_NONE,
+                                         TemplateDBusService::Common::DBus::TEMPLATE_SERVICE_NAME,
+                                         TemplateDBusService::Common::DBus::TEMPLATE_OBJECT_PATH);
+
+    if (template_proxy->dbusProxy()->get_name_owner().empty()) {
         std::cout << "Service not available, quitting.\n";
         return EXIT_FAILURE;
     }
 
-    std::cout << "Service method returned: " << proxy->RemoveMeFoo_sync(123) << '\n';
-
-    return EXIT_SUCCESS;
+    return TemplateDBusService::Cli::run(template_proxy, *arguments);
 }
