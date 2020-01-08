@@ -1,14 +1,17 @@
-# Template D-Bus service
+Template D-Bus service
+======================
 
 Template for creating a D-Bus service component.
 
-# Dependencies
+Dependencies
+============
 
 - [gdbus-codegen-glibmm](https://github.com/Pelagicore/gdbus-codegen-glibmm)
 - glibmm (2.56)
 - googletest (1.8.1, for tests, optional)
 
-# Building
+Building
+========
 
 [Meson](https://mesonbuild.com/) is used for building. To build simply run:
 
@@ -17,7 +20,8 @@ meson build
 ninja -C build
 ```
 
-# Running Tests
+Running Tests
+=============
 
 Tests can be run with:
 
@@ -27,7 +31,8 @@ meson test -C build
 
 "No tests defined." is printed if the required version of googletest could not be found.
 
-# License and Copyright
+License and Copyright
+=====================
 
 Copyright © 2019 Luxoft Sweden AB
 
