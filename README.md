@@ -4,7 +4,7 @@ Template for creating a D-Bus service component.
 
 # Dependencies
 
-- gdbus-codgen-glibmm
+- gdbus-codegen-glibmm
 - glibmm (2.56)
 - googletest (1.8.1, for tests, optional)
 
